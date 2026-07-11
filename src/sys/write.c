@@ -247,7 +247,12 @@ static NTSTATUS FspFsvolWriteCached(
     FILE_END_OF_FILE_INFORMATION EndOfFileInformation;
     UINT64 WriteEndOffset;
     BOOLEAN ExtendingFile;
+    BOOLEAN DeferWrite;
     BOOLEAN Success;
+
+    /* should we defer the write? */
+    Success = DEBUGTEST(90) && CcCanIWrite(FileObject, WriteLength, CanWait, Retrying);
+    DeferWrite = !Success;
 
     /* try to acquire the FileNode Main exclusive */
     Success = DEBUGTEST(90) &&
@@ -306,8 +311,7 @@ static NTSTATUS FspFsvolWriteCached(
     }
 
     /* should we defer the write? */
-    Success = DEBUGTEST(90) && CcCanIWrite(FileObject, WriteLength, CanWait, Retrying);
-    if (!Success)
+    if (DeferWrite)
     {
         Result = FspWqCreateIrpWorkItem(Irp, FspFsvolWriteCached, 0);
         if (NT_SUCCESS(Result))
